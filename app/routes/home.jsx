@@ -1,7 +1,8 @@
 import {
+  data,
+  Form,
   isRouteErrorResponse,
   Link,
-  redirect,
   useRouteError,
 } from "react-router";
 import { EmptyClipboard, ServerDown } from "../components/Icon";
@@ -18,7 +19,6 @@ export function meta() {
 export async function loader({ request }) {
   let session = await getSession(request.headers.get("Cookie"));
   let tasks = session.get("tasks");
-  console.log({ tasks });
 
   return { tasks };
 }
@@ -53,17 +53,20 @@ export async function action({ request }) {
 
   session.set("tasks", newTasks);
 
-  return redirect("/", {
-    headers: {
-      "Set-Cookie": await commitSession(session),
-    },
-  });
+  return data(
+    { ok: true },
+    {
+      headers: {
+        "Set-Cookie": await commitSession(session),
+      },
+    }
+  );
 }
 
 export default function Home({ loaderData, actionData }) {
   return (
     <main className="max-w-xl mx-auto mt-20">
-      <form method="post" action="?index">
+      <Form method="post" action="?index">
         <input
           type="text"
           name="task"
@@ -74,7 +77,7 @@ export default function Home({ loaderData, actionData }) {
         {actionData?.fieldErrors?.task ? (
           <p className="text-red-500 mt-2">{actionData.fieldErrors.task}</p>
         ) : null}
-      </form>
+      </Form>
 
       <ul className="mt-8 space-y-4 text-gray-300">
         {loaderData?.tasks ? (
