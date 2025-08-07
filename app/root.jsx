@@ -1,13 +1,16 @@
 import {
   isRouteErrorResponse,
+  Link,
   Links,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
+  useRouteError,
 } from "react-router";
 
 import "./app.css";
+import { ServerDown } from "./components/Icon";
 
 export const links = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -44,31 +47,38 @@ export default function App() {
   return <Outlet />;
 }
 
-export function ErrorBoundary({ error }) {
-  let message = "Oops!";
-  let details = "An unexpected error occurred.";
-  let stack;
+export function ErrorBoundary() {
+  const error = useRouteError();
 
   if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error";
-    details =
-      error.status === 404
-        ? "The requested page could not be found."
-        : error.statusText || details;
-  } else if (import.meta.env.DEV && error && error instanceof Error) {
-    details = error.message;
-    stack = error.stack;
+    return (
+      <div className="flex flex-col items-center gap-8 mt-20 max-w-3xl mx-auto text-center">
+        <h1 className="text-4xl text-red-500 font-bold">
+          {error.status} {error.statusText}
+        </h1>
+        <p className="text-red-300">{error.data}</p>
+        <div className="w-80">
+          <ServerDown />
+        </div>
+        <Link to="." className="bg-white text-black px-8 py-3 rounded-lg">
+          Try again
+        </Link>
+      </div>
+    );
+  } else if (error instanceof Error) {
+    return (
+      <div className="flex flex-col items-center gap-8 mt-20 max-w-3xl mx-auto text-center">
+        <h1>Error</h1>
+        <p>{error.message}</p>
+        <div className="w-80">
+          <ServerDown />
+        </div>
+        <Link to="." className="bg-white text-black px-8 py-3 rounded-lg">
+          Try again
+        </Link>
+      </div>
+    );
+  } else {
+    return <h1>Unknown Error</h1>;
   }
-
-  return (
-    <main className="pt-16 p-4 container mx-auto">
-      <h1>{message}</h1>
-      <p>{details}</p>
-      {stack && (
-        <pre className="w-full p-4 overflow-x-auto">
-          <code>{stack}</code>
-        </pre>
-      )}
-    </main>
-  );
 }
