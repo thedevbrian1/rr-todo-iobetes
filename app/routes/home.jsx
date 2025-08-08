@@ -71,6 +71,11 @@ export default function Home({ loaderData, actionData }) {
 
   let isSubmitting = navigation.state !== "idle";
 
+  let optimisticText;
+
+  if (isSubmitting) {
+    optimisticText = navigation.formData.get("task");
+  }
   // Clear form after submission
   useEffect(() => {
     formRef.current.reset();
@@ -93,14 +98,23 @@ export default function Home({ loaderData, actionData }) {
 
       <ul className="mt-8 space-y-4 text-gray-300">
         {loaderData?.tasks ? (
-          loaderData.tasks.map((item, index) => (
-            <Todoitem
-              key={`task-${index}`}
-              name={`task-${index}`}
-              htmlFor={`task-${index}`}
-              text={item}
-            />
-          ))
+          <>
+            {loaderData.tasks.map((item, index) => (
+              <Todoitem
+                key={`task-${index}`}
+                name={`task-${index}`}
+                htmlFor={`task-${index}`}
+                text={item}
+              />
+            ))}
+            {isSubmitting ? (
+              <Todoitem
+                name={"new-task"}
+                htmlFor={"new-task"}
+                text={optimisticText}
+              />
+            ) : null}
+          </>
         ) : (
           <div>
             <div className="w-40 mx-auto">
