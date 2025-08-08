@@ -5,6 +5,7 @@ import {
   Link,
   useNavigation,
   useRouteError,
+  useSubmit,
 } from "react-router";
 import { EmptyClipboard, ServerDown } from "../components/Icon";
 import { validateText } from "../.server/validation";
@@ -33,27 +34,46 @@ export async function action({ request }) {
   let session = await getSession(request.headers.get("Cookie"));
 
   let formData = await request.formData();
-  let task = formData.get("task");
+  let action = formData.get("_action");
+  console.log({ action });
 
-  // Validation
-  let fieldErrors = {
-    task: validateText(task),
-  };
+  switch (action) {
+    case "create": {
+      let task = formData.get("task");
 
-  // Return errors if any
-  if (Object.values(fieldErrors).some(Boolean)) {
-    return { fieldErrors };
+      // Validation
+      let fieldErrors = {
+        task: validateText(task),
+      };
+
+      // Return errors if any
+      if (Object.values(fieldErrors).some(Boolean)) {
+        return { fieldErrors };
+      }
+
+      // Store to the session
+
+      let tasks = session.get("tasks") || [];
+
+      let newTasks = [...tasks];
+
+      let newTask = {
+        task,
+        id: newTasks.length,
+        isComplete: false,
+      };
+
+      newTasks.push(newTask);
+
+      session.set("tasks", newTasks);
+      break;
+    }
+    case "edit": {
+      let id = formData.get("id");
+      console.log({ id });
+      break;
+    }
   }
-
-  // Store to the session
-
-  let tasks = session.get("tasks") || [];
-
-  let newTasks = [...tasks];
-
-  newTasks.push(task);
-
-  session.set("tasks", newTasks);
 
   return data(
     { ok: true },
@@ -66,8 +86,11 @@ export async function action({ request }) {
 }
 
 export default function Home({ loaderData, actionData }) {
+  console.log({ loaderData });
+
   let formRef = useRef(null);
   let navigation = useNavigation();
+  let submit = useSubmit();
 
   let isSubmitting = navigation.state !== "idle";
 
@@ -75,6 +98,10 @@ export default function Home({ loaderData, actionData }) {
 
   if (isSubmitting) {
     optimisticText = navigation.formData.get("task");
+  }
+
+  function handleSubmit(event) {
+    submit(event.currentTarget);
   }
   // Clear form after submission
   useEffect(() => {
@@ -91,48 +118,61 @@ export default function Home({ loaderData, actionData }) {
           placeholder="Enter task"
           className={`w-full p-4 border ${actionData?.fieldErrors?.task ? "border-red-500" : "border-amber-600"}  rounded-lg`}
         />
+        <input type="hidden" name="_action" value="create" />
         {actionData?.fieldErrors?.task ? (
           <p className="text-red-500 mt-2">{actionData.fieldErrors.task}</p>
         ) : null}
       </Form>
 
-      <ul className="mt-8 space-y-4 text-gray-300">
-        {loaderData?.tasks ? (
-          <>
-            {loaderData.tasks.map((item, index) => (
-              <Todoitem
-                key={`task-${index}`}
-                name={`task-${index}`}
-                htmlFor={`task-${index}`}
-                text={item}
-              />
-            ))}
-            {isSubmitting ? (
-              <Todoitem
-                name={"new-task"}
-                htmlFor={"new-task"}
-                text={optimisticText}
-              />
-            ) : null}
-          </>
-        ) : (
-          <div>
-            <div className="w-40 mx-auto">
-              <EmptyClipboard />
+      <Form method="post" onChange={handleSubmit}>
+        <input type="hidden" name="_action" value="edit" />
+        {/* FIXME: The submitted id is not correct */}
+        <ul className="mt-8 space-y-4 text-gray-300">
+          {loaderData?.tasks ? (
+            <>
+              {loaderData.tasks.map((item) => (
+                <Todoitem
+                  key={item.id}
+                  name={`task-${item.id}`}
+                  id={`task-${item.id}`}
+                  htmlFor={`task-${item.id}`}
+                  text={item.task}
+                  isComplete={item.isComplete}
+                />
+              ))}
+              {isSubmitting ? (
+                <Todoitem
+                  name={"new-task"}
+                  htmlFor={"new-task"}
+                  text={optimisticText}
+                />
+              ) : null}
+            </>
+          ) : (
+            <div>
+              <div className="w-40 mx-auto">
+                <EmptyClipboard />
+              </div>
+              <p className="text-center mt-8 text-gray-400">Empty list</p>
             </div>
-            <p className="text-center mt-8 text-gray-400">Empty list</p>
-          </div>
-        )}
-      </ul>
+          )}
+        </ul>
+      </Form>
     </main>
   );
 }
 
-function Todoitem({ name, id, htmlFor, text }) {
+function Todoitem({ name, id, htmlFor, text, isComplete }) {
   return (
     <li className="flex gap-2 items-center">
       <input type="checkbox" name={name} id={id} />
-      <label htmlFor={htmlFor}>{text}</label>
+      <input type="hidden" name="id" value={id} />
+      <label
+        htmlFor={htmlFor}
+        className={`${isComplete ? "line-through text-gray-500" : ""}`}
+      >
+        {text}
+      </label>
     </li>
   );
 }
