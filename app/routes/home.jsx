@@ -3,11 +3,13 @@ import {
   Form,
   isRouteErrorResponse,
   Link,
+  useNavigation,
   useRouteError,
 } from "react-router";
 import { EmptyClipboard, ServerDown } from "../components/Icon";
 import { validateText } from "../.server/validation";
 import { commitSession, getSession } from "../.server/session";
+import { useEffect, useRef } from "react";
 
 export function meta() {
   return [
@@ -64,9 +66,19 @@ export async function action({ request }) {
 }
 
 export default function Home({ loaderData, actionData }) {
+  let formRef = useRef(null);
+  let navigation = useNavigation();
+
+  let isSubmitting = navigation.state !== "idle";
+
+  // Clear form after submission
+  useEffect(() => {
+    formRef.current.reset();
+  }, [isSubmitting]);
+
   return (
     <main className="max-w-xl mx-auto mt-20">
-      <Form method="post" action="?index">
+      <Form method="post" ref={formRef}>
         <input
           type="text"
           name="task"
